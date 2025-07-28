@@ -3,6 +3,7 @@ plugins {
     id 'com.github.sherter.google-java-format' version '0.9'
     id 'idea'
     id 'application'
+    id 'jacoco' // 🔥 Added
 }
 
 repositories {
@@ -47,6 +48,10 @@ dependencies {
                 "com.fasterxml.jackson.core:jackson-databind:${jacksonDatabindVersion}",
                 "io.netty:netty-tcnative-boringssl-static:2.0.72.Final"
     }
+
+    // 🔥 JUnit 5 for tests
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 protobuf {
@@ -70,7 +75,6 @@ googleJavaFormat {
     toolVersion '1.27.0'
 }
 
-// Inform IDEs like IntelliJ IDEA, Eclipse or NetBeans about the generated code.
 sourceSets {
     main {
         java {
@@ -79,12 +83,38 @@ sourceSets {
             srcDirs 'build/generated/source/proto/main/grpc/hipstershop'
         }
     }
+    // 🔥 Add test sourceSet (if not already present)
+    test {
+        java {
+            srcDirs 'src/test/java'
+        }
+    }
 }
 
+// 🔥 Enable JUnit Platform and XML reports
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    reports {
+        junitXml.required = true
+        html.required = true
+    }
+}
+
+// 🔥 JaCoCo code coverage config
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// Docker-related cache setup
 startScripts.enabled = false
 
-// This to cache dependencies during Docker image building. First build will take time.
-// Subsequent build will be incremental.
 task downloadRepos(type: Copy) {
     from configurations.compileClasspath
     into offlineCompile
@@ -97,9 +127,6 @@ task adService(type: CreateStartScripts) {
     applicationName = 'AdService'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = startScripts.classpath
-    // @TODO: https://github.com/GoogleCloudPlatform/microservices-demo/issues/2517
-    // defaultJvmOpts =
-    //          ["-agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=adservice,-cprof_service_version=1.0.0"]
 }
 
 task adServiceClient(type: CreateStartScripts) {
@@ -107,9 +134,6 @@ task adServiceClient(type: CreateStartScripts) {
     applicationName = 'AdServiceClient'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = startScripts.classpath
-    // @TODO: https://github.com/GoogleCloudPlatform/microservices-demo/issues/2517
-    // defaultJvmOpts =
-    //          ["-agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=adserviceclient,-cprof_service_version=1.0.0"]
 }
 
 applicationDistribution.into('bin') {
