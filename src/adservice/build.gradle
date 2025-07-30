@@ -4,6 +4,7 @@ plugins {
     id 'idea'
     id 'application'
     id 'jacoco' // 🔥 Added
+    id 'org.sonarqube' version '4.4.1.3373' // 🔥 SonarCloud plugin
 }
 
 repositories {
@@ -49,7 +50,6 @@ dependencies {
                 "io.netty:netty-tcnative-boringssl-static:2.0.72.Final"
     }
 
-    // 🔥 JUnit 5 for tests
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
@@ -83,7 +83,6 @@ sourceSets {
             srcDirs 'build/generated/source/proto/main/grpc/hipstershop'
         }
     }
-    // 🔥 Add test sourceSet (if not already present)
     test {
         java {
             srcDirs 'src/test/java'
@@ -91,7 +90,7 @@ sourceSets {
     }
 }
 
-// 🔥 Enable JUnit Platform and XML reports
+// ✅ Test and reporting config
 test {
     useJUnitPlatform()
     testLogging {
@@ -103,16 +102,40 @@ test {
     }
 }
 
-// 🔥 JaCoCo code coverage config
+// ✅ JaCoCo config
+jacoco {
+    toolVersion = "0.8.11"
+}
+
 jacocoTestReport {
     dependsOn test
     reports {
         xml.required = true
         html.required = true
     }
+    // Optional: customize report path
+    reports {
+        xml.destination file("${buildDir}/reports/jacoco/report.xml")
+    }
 }
 
-// Docker-related cache setup
+// ✅ SonarCloud integration
+sonarqube {
+    properties {
+        property "sonar.projectKey", "yash-org_microservices-adservice"
+        property "sonar.organization", "yash-org"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.sources", "hipstershop"
+        property "sonar.tests", "src/test/java"
+        property "sonar.java.binaries", "${buildDir}/classes"
+        property "sonar.junit.reportPaths", "${buildDir}/test-results/test"
+        property "sonar.jacoco.reportPaths", "${buildDir}/reports/jacoco/report.xml"
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.login", System.getenv("sonar-token") // Inject via Harness
+    }
+}
+
+// Docker and offline-related
 startScripts.enabled = false
 
 task downloadRepos(type: Copy) {
